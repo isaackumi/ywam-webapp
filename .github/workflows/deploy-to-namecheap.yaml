@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,24 +13,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Set up SSH
-      run:  |
+    - name: Setup SSH with a passphrase
+      env:
+        SSH_PASSPHRASE: ${{ secrets.SSH_PASSWORD }}
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
         eval "$(ssh-agent -s)"
-        
-        # Add SSH key to the agent
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > id_rsa
-        chmod 600 id_rsa
-        ssh-add id_rsa <<< "${{ secrets.SSH_PASSPHRASE }}"
-
-
-    - name: Install sshpass
-      run: sudo apt-get update && sudo apt-get install -y sshpass
+        echo "$SSH_PASSPHRASE" | tr -d '\n' | ssh-add ~/.ssh/id_rsa
 
     - name: Deploy to Namecheap
       env:
-        SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        HOST: ywambtnk@66.29.132.10
+        PORT: 21098
       run: |
-        sshpass -e ssh -o StrictHostKeyChecking=no ywambtnk@66.29.132.10 -p 21098 << 'EOF'
+        ssh -o StrictHostKeyChecking=no -p $PORT $HOST << 'EOF'
           cd /app
           git pull origin main
         EOF
