@@ -1,4 +1,4 @@
-name: Deploy Node.js to Namecheap (Debug)
+name: Deploy Node.js to Namecheap
 
 on:
   push:
@@ -13,53 +13,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Setup SSH with a passphrase (Debug)
+    - name: Setup SSH key
       env:
-        SSH_PASSPHRASE: ${{ secrets.SSH_PASSWORD }}
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       run: |
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        eval "$(ssh-agent -s)"
-        
-        # Attempt to add the key with the provided passphrase
-        if echo "$SSH_PASSPHRASE" | tr -d '\n' | ssh-add ~/.ssh/id_rsa 2>/dev/null; then
-          echo "Successfully added the SSH key with the provided passphrase."
-        else
-          echo "Failed to add the SSH key. The provided passphrase may be incorrect."
-          echo "Attempting to add the key without a passphrase..."
-          if ssh-add ~/.ssh/id_rsa </dev/null 2>/dev/null; then
-            echo "Successfully added the SSH key without a passphrase."
-          else
-            echo "Failed to add the SSH key without a passphrase. The key might be invalid or corrupted."
-            exit 1
-          fi
-        fi
-        
-        # Debug output
-        echo "SSH agent PID: $SSH_AGENT_PID"
-        ssh-add -l
-        
-        # Generate and display the public key
-        ssh-keygen -y -f ~/.ssh/id_rsa > ~/.ssh/id_rsa.pub
-        echo "Generated public key:"
-        cat ~/.ssh/id_rsa.pub
-
-    - name: Test SSH Connection (Debug)
-      env:
-        HOST: ywambtnk@66.29.132.10
-        PORT: 21098
-      run: |
-        ssh -v -o StrictHostKeyChecking=no -p $PORT $HOST exit
-      continue-on-error: true
 
     - name: Deploy to Namecheap
       env:
         HOST: ywambtnk@66.29.132.10
         PORT: 21098
+        SSH_PASSPHRASE: ${{ secrets.SSH_PASSWORD }}
       run: |
-        ssh -v -o StrictHostKeyChecking=no -p $PORT $HOST << 'EOF'
+        # Use sshpass to provide the passphrase
+        sudo apt-get install sshpass -y
+        export SSHPASS=$SSH_PASSPHRASE
+        sshpass -e ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -p $PORT $HOST << 'EOF'
           cd /app
           git pull origin main
         EOF
