@@ -22,7 +22,20 @@ jobs:
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         eval "$(ssh-agent -s)"
-        echo "$SSH_PASSPHRASE" | tr -d '\n' | ssh-add ~/.ssh/id_rsa
+        
+        # Attempt to add the key with the provided passphrase
+        if echo "$SSH_PASSPHRASE" | tr -d '\n' | ssh-add ~/.ssh/id_rsa 2>/dev/null; then
+          echo "Successfully added the SSH key with the provided passphrase."
+        else
+          echo "Failed to add the SSH key. The provided passphrase may be incorrect."
+          echo "Attempting to add the key without a passphrase..."
+          if ssh-add ~/.ssh/id_rsa </dev/null 2>/dev/null; then
+            echo "Successfully added the SSH key without a passphrase."
+          else
+            echo "Failed to add the SSH key without a passphrase. The key might be invalid or corrupted."
+            exit 1
+          fi
+        fi
         
         # Debug output
         echo "SSH agent PID: $SSH_AGENT_PID"
