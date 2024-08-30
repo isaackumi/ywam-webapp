@@ -1,4 +1,4 @@
-name: Deploy Node.js to Namecheap
+name: Deploy Node.js to Namecheap (Debug)
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Set a 10-minute timeout for the entire job
 
     steps:
     - name: Checkout code
@@ -20,6 +21,19 @@ jobs:
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
+        
+        # Display public key for verification
+        ssh-keygen -y -f ~/.ssh/id_rsa
+
+    - name: Test SSH Connection
+      env:
+        HOST: ywambtnk@66.29.132.10
+        PORT: 21098
+        SSH_PASSPHRASE: ${{ secrets.SSH_PASSWORD }}
+      run: |
+        sudo apt-get install sshpass -y
+        export SSHPASS=$SSH_PASSPHRASE
+        sshpass -e ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -p $PORT $HOST echo "SSH connection successful"
 
     - name: Deploy to Namecheap
       env:
@@ -27,10 +41,11 @@ jobs:
         PORT: 21098
         SSH_PASSPHRASE: ${{ secrets.SSH_PASSWORD }}
       run: |
-        # Use sshpass to provide the passphrase
-        sudo apt-get install sshpass -y
         export SSHPASS=$SSH_PASSPHRASE
         sshpass -e ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -p $PORT $HOST << 'EOF'
-          cd /app
-          git pull origin main
+          echo "Connected to server"
+          cd /app || echo "Failed to change directory"
+          echo "Current directory: $(pwd)"
+          git pull origin main || echo "Git pull failed"
+          echo "Deployment complete"
         EOF
