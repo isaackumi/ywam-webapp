@@ -3,8 +3,12 @@ const router = express.Router();
 // const PageVisit = require('../models/pageVisitModel');
 
 router.get('/',(req, res) => {
-    res.render('index',{layout:false});
+    res.render('site-under-construction',{layout:false});
 });
+
+// router.get('/',(req, res) => {
+//     res.render('index',{layout:false});
+// });
 
 router.get('/about',(req, res) => {
     res.render('about',{layout:false});
